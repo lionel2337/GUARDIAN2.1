@@ -247,4 +247,53 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get signOut => 'Se déconnecter';
+
+  @override
+  String get aiTestAndDiagnostics => 'Test IA & Diagnostics';
+
+  @override
+  String get testAiModels => 'Test Modèles IA';
+
+  @override
+  String get verifyAudioMovementModels =>
+      'Vérifier les modèles audio et mouvement';
+
+  @override
+  String get showDiagnostics => 'Afficher Diagnostics';
+
+  @override
+  String get displayRealTimeSensorStatus =>
+      'Afficher l\'état des capteurs en temps réel';
+
+  @override
+  String get receiveAlertsAndReminders => 'Recevoir alertes et rappels';
+
+  @override
+  String get managePairedGpsTraceurs => 'Gérer les traceurs GPS appairés';
+
+  @override
+  String get online => 'En ligne';
+
+  @override
+  String get offline => 'Hors ligne';
+
+  @override
+  String get anonymous => 'Anonyme';
+
+  @override
+  String get noEmail => 'Pas d\'email';
+
+  @override
+  String get active => 'Actif';
+
+  @override
+  String get inactive => 'Inactif';
+
+  @override
+  String get currentLocation => 'Position Actuelle';
+
+  @override
+  String alertingContactsInSeconds(int seconds) {
+    return 'Alerte aux contacts dans $seconds secondes...';
+  }
 }

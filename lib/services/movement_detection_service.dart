@@ -55,7 +55,7 @@ class MovementAlert {
 
 class MovementDetectionService {
   // ── Configuration ────────────────────────────────────────────────────────
-  static const int _windowSize = 50; // frames per analysis window
+  int _windowSize = 50; // frames per analysis window, dynamically updated from model
   static const double _fallThreshold = 0.75;
   static const double _fightThreshold = 0.70;
   static const double _runningThreshold = 0.65;
@@ -65,6 +65,9 @@ class MovementDetectionService {
   bool _isRunning = false;
   bool _modelLoaded = false;
   Interpreter? _interpreter;
+  List<int> _inputShape = [];
+  List<int> _outputShape = [];
+  List<String> _modelClasses = ['normal', 'fall', 'fight', 'running'];
   StreamSubscription<AccelerometerEvent>? _accelSub;
   StreamSubscription<GyroscopeEvent>? _gyroSub;
 
@@ -108,10 +111,32 @@ class MovementDetectionService {
         'assets/ml/movement_model_float16.tflite',
         options: options,
       );
+      _inputShape = _interpreter!.getInputTensor(0).shape;
+      _outputShape = _interpreter!.getOutputTensor(0).shape;
+
+      // Auto-detect class count and window size from input shape.
+      if (_inputShape.length >= 2) {
+        _windowSize = _inputShape[_inputShape.length - 2];
+      }
+
+      final outSize = _outputShape.isNotEmpty ? _outputShape.last : 4;
+      if (outSize == 2) {
+        _modelClasses = ['normal', 'danger'];
+      } else if (outSize == 3) {
+        _modelClasses = ['normal', 'fall', 'fight'];
+      } else if (outSize >= 4) {
+        _modelClasses = ['normal', 'fall', 'fight', 'running'];
+        if (outSize > 4) {
+          _modelClasses = List.generate(outSize, (i) => i == 0 ? 'normal' : 'class_$i');
+        }
+      }
+
       _modelLoaded = true;
     } catch (e) {
       _modelLoaded = false;
       _interpreter = null;
+      _inputShape = [];
+      _outputShape = [];
       // Fallback to heuristic detection — still functional offline.
     }
   }
@@ -192,21 +217,43 @@ class MovementDetectionService {
   /// Returns `true` if inference succeeded, `false` otherwise.
   bool _analyzeWithModel() {
     try {
-      // Build input [1, 50, 6] : accel_x, accel_y, accel_z, gyro_x, gyro_y, gyro_z
-      final input = <List<List<double>>>[
-        List.generate(_windowSize, (i) {
-          final a = _accelBuffer[_accelBuffer.length - _windowSize + i];
-          final g = _gyroBuffer[_gyroBuffer.length - _windowSize + i];
+      final win = math.min(_windowSize, _accelBuffer.length);
+      if (win < 10) return false;
+
+      dynamic input;
+      dynamic output;
+
+      if (_inputShape.length == 3) {
+        // Expected [1, window, 6] : accel_x, accel_y, accel_z, gyro_x, gyro_y, gyro_z
+        final inputData = List.generate(win, (i) {
+          final a = _accelBuffer[_accelBuffer.length - win + i];
+          final g = _gyroBuffer[_gyroBuffer.length - win + i];
           return <double>[a[0], a[1], a[2], g[0], g[1], g[2]];
-        }),
-      ];
+        });
+        input = <List<List<double>>>[inputData];
+        output = <List<double>>[List<double>.filled(_outputShape.last, 0.0)];
+      } else if (_inputShape.length == 2) {
+        // Flattened input [1, window * 6]
+        final flat = <double>[];
+        for (int i = 0; i < win; i++) {
+          final a = _accelBuffer[_accelBuffer.length - win + i];
+          final g = _gyroBuffer[_gyroBuffer.length - win + i];
+          flat.addAll([a[0], a[1], a[2], g[0], g[1], g[2]]);
+        }
+        input = <List<double>>[flat];
+        output = <List<double>>[List<double>.filled(_outputShape.last, 0.0)];
+      } else {
+        return false;
+      }
 
-      final output = <List<double>>[List<double>.filled(4, 0.0)];
       _interpreter!.run(input, output);
-      final probs = _softmax(List<double>.from(output[0]));
+      List<double> probs;
+      if (output is List<List<double>>) {
+        probs = _softmax(List<double>.from(output[0]));
+      } else {
+        probs = List<double>.from(output[0]);
+      }
 
-      // Determine class with highest probability
-      const classes = ['normal', 'fall', 'fight', 'running'];
       int maxIdx = 0;
       double maxProb = probs[0];
       for (int i = 1; i < probs.length; i++) {
@@ -216,7 +263,7 @@ class MovementDetectionService {
         }
       }
 
-      final type = classes[maxIdx];
+      final type = _modelClasses[maxIdx];
       double confidence = maxProb;
 
       // Apply per-class thresholds
@@ -229,7 +276,7 @@ class MovementDetectionService {
       }
 
       final avgAccel = _avgMagnitude(
-        _accelBuffer.sublist(_accelBuffer.length - _windowSize),
+        _accelBuffer.sublist(_accelBuffer.length - win),
       );
 
       final result = MovementResult(

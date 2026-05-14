@@ -83,6 +83,9 @@ class AudioDetectionService {
   // ── TFLite ────────────────────────────────────────────────────────────────
   Interpreter? _interpreter;
   bool _modelLoaded = false;
+  List<int> _inputShape = [];
+  List<int> _outputShape = [];
+  List<String> _modelClasses = ['normal', 'scream', 'keyword'];
 
   // ── Emergency Keywords (French + English) ─────────────────────────────────
   static const List<String> emergencyKeywordsFr = [
@@ -259,10 +262,25 @@ class AudioDetectionService {
         'assets/ml/audio_model_float16.tflite',
         options: options,
       );
+      _inputShape = _interpreter!.getInputTensor(0).shape;
+      _outputShape = _interpreter!.getOutputTensor(0).shape;
+
+      // Auto-detect class count from output shape.
+      final outSize = _outputShape.isNotEmpty ? _outputShape.last : 0;
+      if (outSize == 2) {
+        _modelClasses = ['normal', 'danger'];
+      } else if (outSize == 3) {
+        _modelClasses = ['normal', 'scream', 'keyword'];
+      } else if (outSize >= 4) {
+        _modelClasses = List.generate(outSize, (i) => i == 0 ? 'normal' : 'class_$i');
+      }
+
       _modelLoaded = true;
     } catch (e) {
       _modelLoaded = false;
       _interpreter = null;
+      _inputShape = [];
+      _outputShape = [];
     }
   }
 
@@ -628,7 +646,7 @@ class AudioDetectionService {
       if (!file.existsSync()) return;
 
       final bytes = await file.readAsBytes();
-      if (bytes.length < 17408) return;
+      if (bytes.length < 2048) return;
 
       final byteData = ByteData.view(bytes.buffer);
       final samples = <double>[];
@@ -637,27 +655,50 @@ class AudioDetectionService {
         samples.add(sample / 32768.0);
       }
 
-      const neededSamples = 8704;
-      if (samples.length < neededSamples) return;
+      dynamic input;
+      dynamic output;
 
-      final recentSamples = samples.sublist(samples.length - neededSamples);
-      final mfcc = computeMfcc(recentSamples);
+      // Build input dynamically based on model shape.
+      if (_inputShape.length == 3) {
+        // Expected [1, frames, features]
+        final targetFrames = _inputShape[1];
+        final targetFeatures = _inputShape[2];
 
-      final inputFrames = List.generate(32, (i) {
-        if (i < mfcc.length) {
-          return mfcc[mfcc.length - 32 + i];
-        }
-        return List.filled(13, 0.0);
-      });
+        // Compute needed samples: each frame is 512 samples, step 256.
+        final neededSamples = (targetFrames - 1) * 256 + 512;
+        if (samples.length < neededSamples) return;
 
-      // Ensure nested lists are explicitly typed as List<double>
-      final input = <List<List<double>>>[inputFrames];
-      final output = <List<double>>[List<double>.filled(3, 0.0)];
+        final recentSamples = samples.sublist(samples.length - neededSamples);
+        final mfcc = computeMfcc(recentSamples, targetFeatures: targetFeatures);
+
+        final inputFrames = List.generate(targetFrames, (i) {
+          if (i < mfcc.length) {
+            return mfcc[mfcc.length - targetFrames + i];
+          }
+          return List.filled(targetFeatures, 0.0);
+        });
+
+        input = <List<List<double>>>[inputFrames];
+        output = <List<double>>[List<double>.filled(_outputShape.last, 0.0)];
+      } else if (_inputShape.length == 2) {
+        // Expected [1, samples]
+        final targetSamples = _inputShape[1];
+        if (samples.length < targetSamples) return;
+        input = <List<double>>[samples.sublist(samples.length - targetSamples)];
+        output = <List<double>>[List<double>.filled(_outputShape.last, 0.0)];
+      } else {
+        // Unsupported shape — skip inference.
+        return;
+      }
 
       _interpreter!.run(input, output);
 
-      final probs = _softmax(List<double>.from(output[0]));
-      const classes = ['normal', 'scream', 'keyword'];
+      List<double> probs;
+      if (output is List<List<double>>) {
+        probs = _softmax(List<double>.from(output[0]));
+      } else {
+        probs = List<double>.from(output[0]);
+      }
 
       int maxIdx = 0;
       double maxProb = probs[0];
@@ -668,8 +709,8 @@ class AudioDetectionService {
         }
       }
 
-      final type = classes[maxIdx];
-      if (type != 'normal' && maxProb > 0.70 && _canFireAlert()) {
+      final type = _modelClasses[maxIdx];
+      if (type != 'normal' && maxProb > 0.65 && _canFireAlert()) {
         _fireAlert(type, maxProb,
             detectedWord: type == 'keyword' ? 'keyword' : null);
       }
@@ -710,7 +751,7 @@ class AudioDetectionService {
   // MFCC Feature Extraction
   // ═══════════════════════════════════════════════════════════════════════════
 
-  List<List<double>> computeMfcc(List<double> audioSamples) {
+  List<List<double>> computeMfcc(List<double> audioSamples, {int targetFeatures = 13}) {
     final frames = _frameSignal(audioSamples);
     final mfccs = <List<double>>[];
 
@@ -719,8 +760,8 @@ class AudioDetectionService {
       final powerSpectrum = _computePowerSpectrum(windowed);
       final melEnergies = _applyMelFilterbank(powerSpectrum);
       final logMel = melEnergies.map((e) => math.log(e + 1e-10)).toList();
-      final mfcc = _dct(logMel).sublist(0, 13);
-      mfccs.add(mfcc);
+      final mfcc = _dct(logMel);
+      mfccs.add(mfcc.sublist(0, math.min(targetFeatures, mfcc.length)));
     }
 
     return mfccs;

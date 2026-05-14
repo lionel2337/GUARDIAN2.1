@@ -107,6 +107,14 @@ class AlertNotifier extends StateNotifier<AlertStateData> {
   void cancelFallAlert() {
     _movement.cancelFallAlert();
     _notifications.cancelNotification(NotificationService.fallNotificationId);
+
+    // Dismiss the most recent active alert so the banner disappears
+    // regardless of whether it was a movement or audio alert.
+    if (state.activeAlerts.isNotEmpty) {
+      final latest = state.activeAlerts.first;
+      acknowledgeAlert(latest.id);
+    }
+
     state = state.copyWith(countdown: null);
   }
 

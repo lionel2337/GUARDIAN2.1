@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../l10n/app_localizations.dart';
 import '../providers/alert_provider.dart';
 import '../providers/connectivity_provider.dart';
 import '../providers/device_provider.dart';
@@ -241,26 +242,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         child: BottomNavigationBar(
           currentIndex: _currentNavIndex,
           onTap: _onNavTap,
-          items: const [
+          items: [
             BottomNavigationBarItem(
-              icon: Icon(Icons.map_rounded),
-              label: 'Map',
+              icon: const Icon(Icons.map_rounded),
+              label: AppLocalizations.of(context)?.map ?? 'Map',
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.route_rounded),
-              label: 'Journey',
+              icon: const Icon(Icons.route_rounded),
+              label: AppLocalizations.of(context)?.journey ?? 'Journey',
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.contacts_rounded),
-              label: 'Contacts',
+              icon: const Icon(Icons.contacts_rounded),
+              label: AppLocalizations.of(context)?.contacts ?? 'Contacts',
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.history_rounded),
-              label: 'History',
+              icon: const Icon(Icons.history_rounded),
+              label: AppLocalizations.of(context)?.history ?? 'History',
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.settings_rounded),
-              label: 'Settings',
+              icon: const Icon(Icons.settings_rounded),
+              label: AppLocalizations.of(context)?.settings ?? 'Settings',
             ),
           ],
         ),

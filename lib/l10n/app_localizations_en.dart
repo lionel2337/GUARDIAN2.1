@@ -244,4 +244,51 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get signOut => 'Sign Out';
+
+  @override
+  String get aiTestAndDiagnostics => 'AI Test & Diagnostics';
+
+  @override
+  String get testAiModels => 'Test AI Models';
+
+  @override
+  String get verifyAudioMovementModels => 'Verify audio & movement models';
+
+  @override
+  String get showDiagnostics => 'Show Diagnostics';
+
+  @override
+  String get displayRealTimeSensorStatus => 'Display real-time sensor status';
+
+  @override
+  String get receiveAlertsAndReminders => 'Receive alerts and reminders';
+
+  @override
+  String get managePairedGpsTraceurs => 'Manage paired GPS traceurs';
+
+  @override
+  String get online => 'Online';
+
+  @override
+  String get offline => 'Offline';
+
+  @override
+  String get anonymous => 'Anonymous';
+
+  @override
+  String get noEmail => 'No email';
+
+  @override
+  String get active => 'Active';
+
+  @override
+  String get inactive => 'Inactive';
+
+  @override
+  String get currentLocation => 'Current Location';
+
+  @override
+  String alertingContactsInSeconds(int seconds) {
+    return 'Alerting contacts in $seconds seconds...';
+  }
 }

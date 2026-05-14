@@ -559,6 +559,96 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Sign Out'**
   String get signOut;
+
+  /// No description provided for @aiTestAndDiagnostics.
+  ///
+  /// In en, this message translates to:
+  /// **'AI Test & Diagnostics'**
+  String get aiTestAndDiagnostics;
+
+  /// No description provided for @testAiModels.
+  ///
+  /// In en, this message translates to:
+  /// **'Test AI Models'**
+  String get testAiModels;
+
+  /// No description provided for @verifyAudioMovementModels.
+  ///
+  /// In en, this message translates to:
+  /// **'Verify audio & movement models'**
+  String get verifyAudioMovementModels;
+
+  /// No description provided for @showDiagnostics.
+  ///
+  /// In en, this message translates to:
+  /// **'Show Diagnostics'**
+  String get showDiagnostics;
+
+  /// No description provided for @displayRealTimeSensorStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Display real-time sensor status'**
+  String get displayRealTimeSensorStatus;
+
+  /// No description provided for @receiveAlertsAndReminders.
+  ///
+  /// In en, this message translates to:
+  /// **'Receive alerts and reminders'**
+  String get receiveAlertsAndReminders;
+
+  /// No description provided for @managePairedGpsTraceurs.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage paired GPS traceurs'**
+  String get managePairedGpsTraceurs;
+
+  /// No description provided for @online.
+  ///
+  /// In en, this message translates to:
+  /// **'Online'**
+  String get online;
+
+  /// No description provided for @offline.
+  ///
+  /// In en, this message translates to:
+  /// **'Offline'**
+  String get offline;
+
+  /// No description provided for @anonymous.
+  ///
+  /// In en, this message translates to:
+  /// **'Anonymous'**
+  String get anonymous;
+
+  /// No description provided for @noEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'No email'**
+  String get noEmail;
+
+  /// No description provided for @active.
+  ///
+  /// In en, this message translates to:
+  /// **'Active'**
+  String get active;
+
+  /// No description provided for @inactive.
+  ///
+  /// In en, this message translates to:
+  /// **'Inactive'**
+  String get inactive;
+
+  /// No description provided for @currentLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Current Location'**
+  String get currentLocation;
+
+  /// No description provided for @alertingContactsInSeconds.
+  ///
+  /// In en, this message translates to:
+  /// **'Alerting contacts in {seconds} seconds...'**
+  String alertingContactsInSeconds(int seconds);
 }
 
 class _AppLocalizationsDelegate

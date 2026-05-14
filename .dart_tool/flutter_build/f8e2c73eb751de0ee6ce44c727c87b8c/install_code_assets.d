@@ -1,0 +1,1 @@
+ C:\\Users\\STARBOY\\Desktop\\GUARDIAN2.1\\.dart_tool\\flutter_build\\f8e2c73eb751de0ee6ce44c727c87b8c\\native_assets.json: 

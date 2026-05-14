@@ -3,6 +3,7 @@ library;
 
 import 'package:flutter/material.dart';
 
+import '../l10n/app_localizations.dart';
 import '../models/alert.dart';
 import '../utils/constants.dart';
 
@@ -22,6 +23,7 @@ class AlertBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context);
     return Container(
       margin: const EdgeInsets.symmetric(
           horizontal: AppDimens.paddingM, vertical: AppDimens.paddingS),
@@ -69,7 +71,8 @@ class AlertBanner extends StatelessWidget {
                     ),
                     if (countdown != null && countdown! > 0)
                       Text(
-                        'Alerting contacts in $countdown seconds...',
+                        localizations?.alertingContactsInSeconds(countdown!) ??
+                            'Alerting contacts in $countdown seconds...',
                         style: TextStyle(
                             color: Colors.white.withOpacity(0.8),
                             fontSize: 12),
@@ -107,7 +110,7 @@ class AlertBanner extends StatelessWidget {
                 child: OutlinedButton.icon(
                   onPressed: onCancel,
                   icon: const Icon(Icons.check_circle_outline, size: 18),
-                  label: const Text("I'm OK"),
+                  label: Text(localizations?.imOkay ?? "I'm OK"),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Colors.white,
                     side: const BorderSide(color: Colors.white54),
@@ -120,7 +123,7 @@ class AlertBanner extends StatelessWidget {
                 child: ElevatedButton.icon(
                   onPressed: onDismiss,
                   icon: const Icon(Icons.emergency_rounded, size: 18),
-                  label: const Text('Send Help'),
+                  label: Text(localizations?.sendHelp ?? 'Send Help'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white,
                     foregroundColor: _backgroundColor,

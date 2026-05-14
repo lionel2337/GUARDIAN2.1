@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../l10n/app_localizations.dart';
 import '../providers/map_provider.dart';
 import '../providers/tracking_provider.dart';
 import '../services/location_service.dart';
@@ -41,18 +42,24 @@ class _JourneyPlannerScreenState extends ConsumerState<JourneyPlannerScreen> {
   Future<void> _loadCurrentPosition() async {
     final pos = await LocationService.instance.getCurrentLocation();
     if (pos != null && mounted) {
-      setState(() {
-        _origin = pos;
-        _originController.text = 'Current Location';
-      });
+      setState(() => _origin = pos);
+      if (_originController.text.isEmpty) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            _originController.text =
+                AppLocalizations.of(context)?.currentLocation ?? 'Current Location';
+          }
+        });
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Plan Your Journey'),
+        title: Text(localizations?.planYourJourney ?? 'Plan Your Journey'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => context.pop(),
@@ -77,7 +84,7 @@ class _JourneyPlannerScreenState extends ConsumerState<JourneyPlannerScreen> {
                   TextField(
                     controller: _originController,
                     decoration: InputDecoration(
-                      hintText: 'Starting point',
+                      hintText: localizations?.startingPoint ?? 'Starting point',
                       prefixIcon: const Icon(Icons.trip_origin,
                           color: AppColors.success),
                       suffixIcon: IconButton(
@@ -92,10 +99,10 @@ class _JourneyPlannerScreenState extends ConsumerState<JourneyPlannerScreen> {
                   // Destination
                   TextField(
                     controller: _destController,
-                    decoration: const InputDecoration(
-                      hintText: 'Destination',
+                    decoration: InputDecoration(
+                      hintText: localizations?.destination ?? 'Destination',
                       prefixIcon:
-                          Icon(Icons.location_on, color: AppColors.danger),
+                          const Icon(Icons.location_on, color: AppColors.danger),
                     ),
                     onSubmitted: (_) => _searchRoutes(),
                   ),
@@ -113,7 +120,7 @@ class _JourneyPlannerScreenState extends ConsumerState<JourneyPlannerScreen> {
                                   strokeWidth: 2, color: Colors.white),
                             )
                           : const Icon(Icons.search_rounded),
-                      label: const Text('Find Safe Routes'),
+                      label: Text(localizations?.findSafeRoutes ?? 'Find Safe Routes'),
                     ),
                   ),
                 ],
@@ -214,7 +221,7 @@ class _JourneyPlannerScreenState extends ConsumerState<JourneyPlannerScreen> {
                   child: ElevatedButton.icon(
                     onPressed: _startMonitoredJourney,
                     icon: const Icon(Icons.play_arrow_rounded),
-                    label: const Text('Start Monitored Journey'),
+                    label: Text(localizations?.startMonitoredJourney ?? 'Start Monitored Journey'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.success,
                       padding: const EdgeInsets.symmetric(vertical: 16),
@@ -240,14 +247,19 @@ class _JourneyPlannerScreenState extends ConsumerState<JourneyPlannerScreen> {
   }
 
   Future<void> _searchRoutes() async {
+    // Parse origin if user typed coordinates manually.
+    if (_origin == null && _originController.text.trim().isNotEmpty) {
+      final parsedOrigin = _parseCoordinates(_originController.text.trim());
+      if (parsedOrigin != null) _origin = parsedOrigin;
+    }
+
     if (_origin == null || _destController.text.trim().isEmpty) return;
 
     setState(() => _isSearching = true);
 
-    // Simulate destination geocoding (in production, use Geocoding package).
-    // For demo, generate a destination near Yaoundé.
-    final destText = _destController.text.trim().toLowerCase();
-    _destination = _simulateGeocode(destText);
+    // Try parsing destination as coordinates first, then fall back to geocoding.
+    final destText = _destController.text.trim();
+    _destination = _parseCoordinates(destText) ?? _simulateGeocode(destText.toLowerCase());
 
     if (_destination == null) {
       setState(() => _isSearching = false);
@@ -282,15 +294,40 @@ class _JourneyPlannerScreenState extends ConsumerState<JourneyPlannerScreen> {
       _isSearching = false;
     });
 
-    // Fit map to show the route.
+    // Fit map to show the route after the next frame to ensure
+    // the map widget has processed the new markers/polylines.
     if (_origin != null && _destination != null) {
-      _mapController.fitCamera(
-        CameraFit.bounds(
-          bounds: LatLngBounds(_origin!, _destination!),
-          padding: const EdgeInsets.all(50),
-        ),
-      );
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        try {
+          _mapController.fitCamera(
+            CameraFit.bounds(
+              bounds: LatLngBounds(_origin!, _destination!),
+              padding: const EdgeInsets.all(50),
+            ),
+          );
+        } catch (_) {
+          // If fitCamera fails, fallback to moving to the destination.
+          _mapController.move(_destination!, 14);
+        }
+      });
     }
+  }
+
+  /// Parse "lat, lng" or "lat,lng" into LatLng. Returns null if invalid.
+  LatLng? _parseCoordinates(String text) {
+    // Remove all whitespace and split by comma.
+    final cleaned = text.replaceAll(RegExp(r'\s+'), '');
+    final parts = cleaned.split(',');
+    if (parts.length != 2) return null;
+
+    final lat = double.tryParse(parts[0]);
+    final lng = double.tryParse(parts[1]);
+    if (lat == null || lng == null) return null;
+
+    // Basic sanity checks for Cameroon / global coordinates.
+    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
+
+    return LatLng(lat, lng);
   }
 
   LatLng? _simulateGeocode(String text) {

@@ -1,4 +1,7 @@
 /// AI Test Screen — test TFLite models and simulate movement alerts.
+///
+/// Fully dynamic : reads model shapes at runtime so any compatible
+/// .tflite file works without hard-coding dimensions.
 library;
 
 import 'dart:math';
@@ -7,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tflite_flutter/tflite_flutter.dart';
 
+import '../l10n/app_localizations.dart';
 import '../providers/alert_provider.dart';
 import '../utils/constants.dart';
 
@@ -24,8 +28,37 @@ class _AiTestScreenState extends ConsumerState<AiTestScreen> {
   List<Map<String, dynamic>> _movementResults = [];
   bool _isLoading = false;
 
-  final List<String> _audioClasses = ["normal", "scream", "keyword"];
-  final List<String> _movementClasses = ["normal", "fall", "fight", "running"];
+  // Default labels — will be overridden if model metadata differs.
+  List<String> _audioClasses = ["normal", "scream", "keyword"];
+  List<String> _movementClasses = ["normal", "fall", "fight", "running"];
+
+  /// Build a nested List structure that matches [shape].
+  /// shape example : [1, 50, 6]  →  List.generate(1, (_) => List.generate(50, (_) => List.generate(6, (_) => rand)))
+  dynamic _buildRandomInput(List<int> shape, {double min = -1, double max = 1}) {
+    final random = Random();
+    dynamic build(List<int> dims) {
+      if (dims.isEmpty) return random.nextDouble() * (max - min) + min;
+      return List.generate(dims.first, (_) => build(dims.sublist(1)));
+    }
+    return build(shape);
+  }
+
+  /// Build a flat or nested output buffer matching [shape].
+  dynamic _buildOutputBuffer(List<int> shape) {
+    dynamic build(List<int> dims) {
+      if (dims.isEmpty) return 0.0;
+      return List.generate(dims.first, (_) => build(dims.sublist(1)));
+    }
+    return build(shape);
+  }
+
+  /// Recursively flatten a nested list to List<double>.
+  List<double> _flattenToDouble(dynamic value) {
+    if (value is List) {
+      return value.expand((e) => _flattenToDouble(e)).toList();
+    }
+    return [value is int ? value.toDouble() : value as double];
+  }
 
   Future<void> _testAudioModel() async {
     setState(() {
@@ -46,48 +79,42 @@ class _AiTestScreenState extends ConsumerState<AiTestScreen> {
       final inputShape = interpreter.getInputTensor(0).shape;
       final outputShape = interpreter.getOutputTensor(0).shape;
       final inputType = interpreter.getInputTensor(0).type;
+      final outputType = interpreter.getOutputTensor(0).type;
 
-      if (inputShape.toString() != "[1, 32, 13]") {
-        setState(() {
-          _audioStatus = "❌ ERREUR : Input shape incorrect\n"
-              "Reçu: $inputShape\n"
-              "Attendu: [1, 32, 13]";
-        });
-        interpreter.close();
-        return;
-      }
+      // Generate random input that matches the model's exact shape.
+      final input = _buildRandomInput(inputShape);
+      final output = _buildOutputBuffer(outputShape);
 
-      final random = Random();
-      final input = <List<List<double>>>[
-        List.generate(
-          32,
-          (_) => List.generate(
-            13,
-            (_) => (random.nextDouble() * 2 - 1),
-          ),
-        ),
-      ];
-
-      final output = <List<double>>[List<double>.filled(3, 0.0)];
-
-      // Explicit allocation check before run.
-      if (!interpreter.isAllocated) {
-        interpreter.allocateTensors();
-      }
-
+      // CRITICAL: Interpreter.fromAsset already allocates tensors.
+      // Calling allocateTensors() again causes "Bad state: failed precondition".
+      // We run directly.
       interpreter.run(input, output);
       interpreter.close();
       interpreter = null;
 
-      final probs = _softmax(List<double>.from(output[0]));
+      // Flatten output to probabilities.
+      final flatOutput = _flattenToDouble(output);
+      final probs = _softmax(List<double>.from(flatOutput));
+
+      // Adapt class names to output size.
+      if (probs.length == 2) {
+        _audioClasses = ["normal", "danger"];
+      } else if (probs.length == 3) {
+        _audioClasses = ["normal", "scream", "keyword"];
+      } else if (probs.length >= 4) {
+        _audioClasses = List.generate(
+          probs.length,
+          (i) => i == 0 ? "normal" : "class_$i",
+        );
+      }
 
       setState(() {
         _audioStatus = "✅ Modèle fonctionnel\n"
             "Shape entrée : $inputShape\n"
             "Shape sortie : $outputShape\n"
-            "Type entrée : $inputType";
+            "Type entrée : $inputType / sortie : $outputType";
         _audioResults = List.generate(
-          _audioClasses.length,
+          probs.length.clamp(0, 10),
           (i) => {"class": _audioClasses[i], "prob": probs[i]},
         );
       });
@@ -116,48 +143,42 @@ class _AiTestScreenState extends ConsumerState<AiTestScreen> {
       final inputShape = interpreter.getInputTensor(0).shape;
       final outputShape = interpreter.getOutputTensor(0).shape;
       final inputType = interpreter.getInputTensor(0).type;
+      final outputType = interpreter.getOutputTensor(0).type;
 
-      if (inputShape.toString() != "[1, 50, 6]") {
-        setState(() {
-          _movementStatus = "❌ ERREUR : Input shape incorrect\n"
-              "Reçu: $inputShape\n"
-              "Attendu: [1, 50, 6]";
-        });
-        interpreter.close();
-        return;
-      }
+      // Generate random input that matches the model's exact shape.
+      final input = _buildRandomInput(inputShape, min: -2, max: 2);
+      final output = _buildOutputBuffer(outputShape);
 
-      final random = Random();
-      final input = <List<List<double>>>[
-        List.generate(
-          50,
-          (_) => List.generate(
-            6,
-            (_) => (random.nextDouble() * 4 - 2),
-          ),
-        ),
-      ];
-
-      final output = <List<double>>[List<double>.filled(4, 0.0)];
-
-      // Explicit allocation check before run.
-      if (!interpreter.isAllocated) {
-        interpreter.allocateTensors();
-      }
-
+      // CRITICAL: Do NOT call allocateTensors() after fromAsset.
       interpreter.run(input, output);
       interpreter.close();
       interpreter = null;
 
-      final probs = _softmax(List<double>.from(output[0]));
+      final flatOutput = _flattenToDouble(output);
+      final probs = _softmax(List<double>.from(flatOutput));
+
+      // Adapt class names to output size.
+      if (probs.length == 2) {
+        _movementClasses = ["normal", "danger"];
+      } else if (probs.length == 3) {
+        _movementClasses = ["normal", "fall", "fight"];
+      } else if (probs.length >= 4) {
+        _movementClasses = ["normal", "fall", "fight", "running"];
+        if (probs.length > 4) {
+          _movementClasses = List.generate(
+            probs.length,
+            (i) => i == 0 ? "normal" : "class_$i",
+          );
+        }
+      }
 
       setState(() {
         _movementStatus = "✅ Modèle fonctionnel\n"
             "Shape entrée : $inputShape\n"
             "Shape sortie : $outputShape\n"
-            "Type entrée : $inputType";
+            "Type entrée : $inputType / sortie : $outputType";
         _movementResults = List.generate(
-          _movementClasses.length,
+          probs.length.clamp(0, 10),
           (i) => {"class": _movementClasses[i], "prob": probs[i]},
         );
       });
@@ -183,23 +204,35 @@ class _AiTestScreenState extends ConsumerState<AiTestScreen> {
 
   void _simulateFall() {
     ref.read(alertProvider.notifier).simulateMovementFall();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Fall simulation triggered')),
-    );
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            AppLocalizations.of(context)?.fallDetected ?? 'Fall simulation triggered',
+          ),
+        ),
+      );
+    }
   }
 
   void _simulateFight() {
     ref.read(alertProvider.notifier).simulateMovementFight();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Fight simulation triggered')),
-    );
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Fight simulation triggered'),
+        ),
+      );
+    }
   }
 
   void _simulateRunning() {
     ref.read(alertProvider.notifier).simulateMovementRunning();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Running simulation triggered')),
-    );
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Running simulation triggered')),
+      );
+    }
   }
 
   @override
@@ -207,10 +240,11 @@ class _AiTestScreenState extends ConsumerState<AiTestScreen> {
     final alertNotifier = ref.read(alertProvider.notifier);
     final audioDiag = alertNotifier.audioDiagnostics;
     final movementDiag = alertNotifier.movementDiagnostics;
+    final localizations = AppLocalizations.of(context);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Test Modèles IA"),
+        title: Text(localizations?.settings ?? "Test Modèles IA"),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -355,7 +389,7 @@ class _AiTestScreenState extends ConsumerState<AiTestScreen> {
                     "  devrait avoir ~33% (audio) ou ~25% (mouvement)\n"
                     "• Si une classe dépasse 90% sur données aléatoires\n"
                     "  → le modèle est biaisé, ré-entraîne-le\n"
-                    "• ❌ sur le shape = le .tflite est incompatible",
+                    "• Le test détecte automatiquement les shapes",
                     style: TextStyle(
                         fontSize: 12, color: AppColors.textSecondary),
                   ),

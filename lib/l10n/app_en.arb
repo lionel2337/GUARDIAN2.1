@@ -76,5 +76,27 @@
   "about": "About",
   "version": "Version",
   "pendingSync": "Pending Sync",
-  "signOut": "Sign Out"
+  "signOut": "Sign Out",
+  "aiTestAndDiagnostics": "AI Test & Diagnostics",
+  "testAiModels": "Test AI Models",
+  "verifyAudioMovementModels": "Verify audio & movement models",
+  "showDiagnostics": "Show Diagnostics",
+  "displayRealTimeSensorStatus": "Display real-time sensor status",
+  "receiveAlertsAndReminders": "Receive alerts and reminders",
+  "managePairedGpsTraceurs": "Manage paired GPS traceurs",
+  "online": "Online",
+  "offline": "Offline",
+  "anonymous": "Anonymous",
+  "noEmail": "No email",
+  "active": "Active",
+  "inactive": "Inactive",
+  "currentLocation": "Current Location",
+  "alertingContactsInSeconds": "Alerting contacts in {seconds} seconds...",
+  "@alertingContactsInSeconds": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  }
 }

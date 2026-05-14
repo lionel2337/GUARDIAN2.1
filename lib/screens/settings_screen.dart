@@ -84,12 +84,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          auth.user?.fullName ?? 'Anonymous',
+                          auth.user?.fullName ?? (localizations?.anonymous ?? 'Anonymous'),
                           style: const TextStyle(
                               fontSize: 16, fontWeight: FontWeight.w600),
                         ),
                         Text(
-                          auth.user?.email ?? 'No email',
+                          auth.user?.email ?? (localizations?.noEmail ?? 'No email'),
                           style: const TextStyle(
                               color: AppColors.textSecondary, fontSize: 13),
                         ),
@@ -106,7 +106,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      connectivity.isOnline ? 'Online' : 'Offline',
+                      connectivity.isOnline
+                          ? (localizations?.online ?? 'Online')
+                          : (localizations?.offline ?? 'Offline'),
                       style: TextStyle(
                         color: connectivity.isOnline
                             ? AppColors.success
@@ -158,23 +160,23 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             const SizedBox(height: 24),
 
             // ── AI Test & Diagnostics ──────────────────────────────────
-            _sectionHeader('AI Test & Diagnostics'),
+            _sectionHeader(localizations?.aiTestAndDiagnostics ?? 'AI Test & Diagnostics'),
             _navTile(
               Icons.science_rounded,
-              'Test AI Models',
-              'Verify audio & movement models',
+              localizations?.testAiModels ?? 'Test AI Models',
+              localizations?.verifyAudioMovementModels ?? 'Verify audio & movement models',
               () => context.push('/ai-test'),
             ),
             _switchTile(
               Icons.monitor_heart_rounded,
-              'Show Diagnostics',
-              'Display real-time sensor status',
+              localizations?.showDiagnostics ?? 'Show Diagnostics',
+              localizations?.displayRealTimeSensorStatus ?? 'Display real-time sensor status',
               _showDiagnostics,
               (v) => setState(() => _showDiagnostics = v),
             ),
             if (_showDiagnostics) ...[
               const SizedBox(height: 8),
-              _buildDiagnosticsCard(alertState),
+              _buildDiagnosticsCard(alertState, localizations),
             ],
 
             const SizedBox(height: 24),
@@ -184,7 +186,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             _switchTile(
               Icons.notifications_rounded,
               localizations?.pushNotifications ?? 'Push Notifications',
-              'Receive alerts and reminders',
+              localizations?.receiveAlertsAndReminders ?? 'Receive alerts and reminders',
               _notificationsEnabled,
               (v) => setState(() => _notificationsEnabled = v),
             ),
@@ -223,7 +225,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             _navTile(
               Icons.router_rounded,
               localizations?.traceurDevices ?? 'Traceur Devices',
-              'Manage paired GPS traceurs',
+              localizations?.managePairedGpsTraceurs ?? 'Manage paired GPS traceurs',
               () => context.push('/traceur-pairing'),
             ),
 
@@ -286,7 +288,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  Widget _buildDiagnosticsCard(AlertStateData alertState) {
+  Widget _buildDiagnosticsCard(AlertStateData alertState, AppLocalizations? localizations) {
     return Container(
       margin: const EdgeInsets.only(bottom: 4),
       padding: const EdgeInsets.all(12),
@@ -298,23 +300,23 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Movement: ${alertState.movementDetectionActive ? 'Active' : 'Inactive'}',
+            'Mouvement: ${alertState.movementDetectionActive ? (localizations?.active ?? 'Active') : (localizations?.inactive ?? 'Inactive')}',
             style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
           ),
           Text(
-            'Audio: ${alertState.audioDetectionActive ? 'Active' : 'Inactive'}',
+            'Audio: ${alertState.audioDetectionActive ? (localizations?.active ?? 'Active') : (localizations?.inactive ?? 'Inactive')}',
             style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
           ),
           if (alertState.countdown != null)
             Text(
-              'Countdown: ${alertState.countdown}s',
+              'Compte à rebours: ${alertState.countdown}s',
               style: const TextStyle(
                   fontSize: 12,
                   color: AppColors.warning,
                   fontWeight: FontWeight.w600),
             ),
           Text(
-            'Active Alerts: ${alertState.activeAlerts.length}',
+            'Alertes actives: ${alertState.activeAlerts.length}',
             style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
           ),
         ],
