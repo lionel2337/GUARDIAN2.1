@@ -1,0 +1,211 @@
+warning: in the working copy of 'linux/flutter/generated_plugin_registrant.cc', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'linux/flutter/generated_plugin_registrant.h', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'linux/flutter/generated_plugins.cmake', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'macos/Flutter/GeneratedPluginRegistrant.swift', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'windows/flutter/generated_plugin_registrant.cc', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'windows/flutter/generated_plugin_registrant.h', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'windows/flutter/generated_plugins.cmake', LF will be replaced by CRLF the next time Git touches it
+[1mdiff --git a/lib/services/supabase_service.dart b/lib/services/supabase_service.dart[m
+[1mindex ca0cb48..8d85948 100644[m
+[1m--- a/lib/services/supabase_service.dart[m
+[1m+++ b/lib/services/supabase_service.dart[m
+[36m@@ -60,17 +60,9 @@[m [mclass SupabaseService {[m
+       data: {'full_name': fullName, 'phone': phone},[m
+     );[m
+ [m
+[31m-    // Also insert into the users table.[m
+[31m-    if (response.user != null) {[m
+[31m-      await _client.from(Tables.users).upsert({[m
+[31m-        'id': response.user!.id,[m
+[31m-        'email': email,[m
+[31m-        'phone': phone,[m
+[31m-        'full_name': fullName,[m
+[31m-        'created_at': DateTime.now().toIso8601String(),[m
+[31m-        'updated_at': DateTime.now().toIso8601String(),[m
+[31m-      });[m
+[31m-    }[m
+[32m+[m[32m    // NE PAS insérer manuellement dans public.users —[m
+[32m+[m[32m    // le trigger handle_new_user() s'en charge automatiquement[m
+[32m+[m[32m    // côté Supabase dès que auth.signUp() réussit.[m
+     return response;[m
+   }[m
+ [m
+[36m@@ -200,7 +192,7 @@[m [mclass SupabaseService {[m
+   /// Fetch active community reports (less than 2 hours old).[m
+   Future<List<CommunityReport>> fetchActiveCommunityReports() async {[m
+     final cutoff =[m
+[31m-        DateTime.now().subtract(AppGeo.reportExpiry).toIso8601String();[m
+[32m+[m[32m    DateTime.now().subtract(AppGeo.reportExpiry).toIso8601String();[m
+     final data = await _client[m
+         .from(Tables.communityReports)[m
+         .select()[m
+[36m@@ -262,67 +254,67 @@[m [mclass SupabaseService {[m
+ [m
+   /// Subscribe to realtime position updates for a specific device.[m
+   RealtimeChannel subscribeToDevicePositions([m
+[31m-    String deviceId,[m
+[31m-    void Function(Position) onPosition,[m
+[31m-  ) {[m
+[32m+[m[32m      String deviceId,[m
+[32m+[m[32m      void Function(Position) onPosition,[m
+[32m+[m[32m      ) {[m
+     return _client[m
+         .channel('positions:$deviceId')[m
+         .onPostgresChanges([m
+[31m-          event: PostgresChangeEvent.insert,[m
+[31m-          schema: 'public',[m
+[31m-          table: Tables.positions,[m
+[31m-          filter: PostgresChangeFilter([m
+[31m-            type: PostgresChangeFilterType.eq,[m
+[31m-            column: 'device_id',[m
+[31m-            value: deviceId,[m
+[31m-          ),[m
+[31m-          callback: (payload) {[m
+[31m-            final pos = Position.fromJson(payload.newRecord);[m
+[31m-            onPosition(pos);[m
+[31m-          },[m
+[31m-        )[m
+[32m+[m[32m      event: PostgresChangeEvent.insert,[m
+[32m+[m[32m      schema: 'public',[m
+[32m+[m[32m      table: Tables.positions,[m
+[32m+[m[32m      filter: PostgresChangeFilter([m
+[32m+[m[32m        type: PostgresChangeFilterType.eq,[m
+[32m+[m[32m        column: 'device_id',[m
+[32m+[m[32m        value: deviceId,[m
+[32m+[m[32m      ),[m
+[32m+[m[32m      callback: (payload) {[m
+[32m+[m[32m        final pos = Position.fromJson(payload.newRecord);[m
+[32m+[m[32m        onPosition(pos);[m
+[32m+[m[32m      },[m
+[32m+[m[32m    )[m
+         .subscribe();[m
+   }[m
+ [m
+   /// Subscribe to realtime alert events for a specific device.[m
+   RealtimeChannel subscribeToAlerts([m
+[31m-    String deviceId,[m
+[31m-    void Function(Alert) onAlert,[m
+[31m-  ) {[m
+[32m+[m[32m      String deviceId,[m
+[32m+[m[32m      void Function(Alert) onAlert,[m
+[32m+[m[32m      ) {[m
+     return _client[m
+         .channel('alerts:$deviceId')[m
+         .onPostgresChanges([m
+[31m-          event: PostgresChangeEvent.insert,[m
+[31m-          schema: 'public',[m
+[31m-          table: Tables.alerts,[m
+[31m-          filter: PostgresChangeFilter([m
+[31m-            type: PostgresChangeFilterType.eq,[m
+[31m-            column: 'device_id',[m
+[31m-            value: deviceId,[m
+[31m-          ),[m
+[31m-          callback: (payload) {[m
+[31m-            final alert = Alert.fromJson(payload.newRecord);[m
+[31m-            onAlert(alert);[m
+[31m-          },[m
+[31m-        )[m
+[32m+[m[32m      event: PostgresChangeEvent.insert,[m
+[32m+[m[32m      schema: 'public',[m
+[32m+[m[32m      table: Tables.alerts,[m
+[32m+[m[32m      filter: PostgresChangeFilter([m
+[32m+[m[32m        type: PostgresChangeFilterType.eq,[m
+[32m+[m[32m        column: 'device_id',[m
+[32m+[m[32m        value: deviceId,[m
+[32m+[m[32m      ),[m
+[32m+[m[32m      callback: (payload) {[m
+[32m+[m[32m        final alert = Alert.fromJson(payload.newRecord);[m
+[32m+[m[32m        onAlert(alert);[m
+[32m+[m[32m      },[m
+[32m+[m[32m    )[m
+         .subscribe();[m
+   }[m
+ [m
+   /// Subscribe to realtime community reports.[m
+   RealtimeChannel subscribeToCommunityReports([m
+[31m-    void Function(CommunityReport) onReport,[m
+[31m-  ) {[m
+[32m+[m[32m      void Function(CommunityReport) onReport,[m
+[32m+[m[32m      ) {[m
+     return _client[m
+         .channel('community_reports')[m
+         .onPostgresChanges([m
+[31m-          event: PostgresChangeEvent.insert,[m
+[31m-          schema: 'public',[m
+[31m-          table: Tables.communityReports,[m
+[31m-          callback: (payload) {[m
+[31m-            final report = CommunityReport.fromJson(payload.newRecord);[m
+[31m-            onReport(report);[m
+[31m-          },[m
+[31m-        )[m
+[32m+[m[32m      event: PostgresChangeEvent.insert,[m
+[32m+[m[32m      schema: 'public',[m
+[32m+[m[32m      table: Tables.communityReports,[m
+[32m+[m[32m      callback: (payload) {[m
+[32m+[m[32m        final report = CommunityReport.fromJson(payload.newRecord);[m
+[32m+[m[32m        onReport(report);[m
+[32m+[m[32m      },[m
+[32m+[m[32m    )[m
+         .subscribe();[m
+   }[m
+ [m
+[36m@@ -389,4 +381,4 @@[m [mclass SupabaseService {[m
+       }[m
+     });[m
+   }[m
+[31m-}[m
+[32m+[m[32m}[m
+\ No newline at end of file[m
+[1mdiff --git a/pubspec.lock b/pubspec.lock[m
+[1mindex e5966cd..a8e5c8d 100644[m
+[1m--- a/pubspec.lock[m
+[1m+++ b/pubspec.lock[m
+[36m@@ -85,10 +85,10 @@[m [mpackages:[m
+     dependency: transitive[m
+     description:[m
+       name: characters[m
+[31m-      sha256: f71061c654a3380576a52b451dd5532377954cf9dbd272a78fc8479606670803[m
+[32m+[m[32m      sha256: faf38497bda5ead2a8c7615f4f7939df04333478bf32e4173fcb06d428b5716b[m
+       url: "https://pub.dev"[m
+     source: hosted[m
+[31m-    version: "1.4.0"[m
+[32m+[m[32m    version: "1.4.1"[m
+   clock:[m
+     dependency: transitive[m
+     description:[m
+[36m@@ -625,18 +625,18 @@[m [mpackages:[m
+     dependency: transitive[m
+     description:[m
+       name: matcher[m
+[31m-      sha256: dc58c723c3c24bf8d3e2d3ad3f2f9d7bd9cf43ec6feaa64181775e60190153f2[m
+[32m+[m[32m      sha256: dc0b7dc7651697ea4ff3e69ef44b0407ea32c487a39fff6a4004fa585e901861[m
+       url: "https://pub.dev"[m
+     source: hosted[m
+[31m-    version: "0.12.17"[m
+[32m+[m[32m    version: "0.12.19"[m
+   material_color_utilities:[m
+     dependency: transitive[m
+     description:[m
+       name: material_color_utilities[m
+[31m-      sha256: f7142bb1154231d7ea5f96bc7bde4bda2a0945d2806bb11670e30b850d56bdec[m
+[32m+[m[32m      sha256: "9c337007e82b1889149c82ed242ed1cb24a66044e30979c44912381e9be4c48b"[m
+       url: "https://pub.dev"[m
+     source: hosted[m
+[31m-    version: "0.11.1"[m
+[32m+[m[32m    version: "0.13.0"[m
+   meta:[m
+     dependency: transitive[m
+     description:[m
+[36m@@ -1238,10 +1238,10 @@[m [mpackages:[m
+     dependency: transitive[m
+     description:[m
+       name: test_api[m
+[31m-      sha256: ab2726c1a94d3176a45960b6234466ec367179b87dd74f1611adb1f3b5fb9d55[m
+[32m+[m[32m      sha256: "8161c84903fd860b26bfdefb7963b3f0b68fee7adea0f59ef805ecca346f0c7a"[m
+       url: "https://pub.dev"[m
+     source: hosted[m
+[31m-    version: "0.7.7"[m
+[32m+[m[32m    version: "0.7.10"[m
+   tflite_flutter:[m
+     dependency: "direct main"[m
+     description:[m

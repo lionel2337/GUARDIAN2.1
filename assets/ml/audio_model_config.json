@@ -1,0 +1,11 @@
+{
+  "sample_rate": 16000,
+  "frame_length": 512,
+  "hop_length": 256,
+  "n_fft": 512,
+  "num_mfcc": 13,
+  "num_mel_filters": 26,
+  "model_input_frames": 32,
+  "classes": ["normal", "scream", "keyword"],
+  "confidence_threshold": 0.7
+}

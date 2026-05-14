@@ -1,0 +1,95 @@
+name: guardians_ai
+description: >
+  Guardians AI — Production-ready safety application for protecting
+  women and children in Cameroon.  Runs AI locally on-device and
+  synchronizes with Supabase when network is available.
+version: 1.0.0+1
+publish_to: 'none'
+
+environment:
+  sdk: '>=3.2.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # ── Supabase ──────────────────────────────────────────────────
+  supabase_flutter: ^2.8.0
+
+  # ── State Management ─────────────────────────────────────────
+  flutter_riverpod: ^2.6.0
+
+  # ── Routing ──────────────────────────────────────────────────
+  go_router: ^14.8.0
+
+  # ── Maps (FREE — OpenStreetMap, no API key needed) ───────────
+  flutter_map: ^7.0.2
+  latlong2: ^0.9.1
+
+  # ── Location & Geocoding ─────────────────────────────────────
+  geolocator: ^13.0.2
+  geocoding: ^3.0.0
+
+  # ── Local Database ───────────────────────────────────────────
+  sqflite: ^2.4.1
+  path_provider: ^2.1.5
+
+  # ── Sensors & AI ─────────────────────────────────────────────
+  sensors_plus: ^6.1.1
+  tflite_flutter: ^0.11.0
+  fftea: ^1.5.0+1
+  record: ^6.2.0
+  speech_to_text: ^7.0.0
+
+  # ── Permissions ──────────────────────────────────────────────
+  permission_handler: ^11.3.1
+
+  # ── Notifications (local only — no Firebase needed) ──────────
+  flutter_local_notifications: ^18.0.1
+
+  # ── Background Work ─────────────────────────────────────────
+  workmanager: ^0.9.0
+
+  # ── Security ─────────────────────────────────────────────────
+  flutter_secure_storage: ^9.2.3
+
+  # ── Networking ───────────────────────────────────────────────
+  dio: ^5.7.0
+  connectivity_plus: ^6.1.1
+
+  # ── Utilities ────────────────────────────────────────────────
+  url_launcher: ^6.3.1
+  share_plus: ^10.1.4
+  path: ^1.9.0
+  crypto: ^3.0.6
+  intl: ^0.20.2
+  timezone: ^0.9.4
+  uuid: ^4.5.1
+  collection: ^1.18.0
+
+  # ── UI ───────────────────────────────────────────────────────
+  flutter_svg: ^2.0.16
+  cached_network_image: ^3.4.1
+  shimmer: ^3.0.0
+  google_fonts: ^6.2.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+  generate: true
+
+  assets:
+    - assets/ml/
+    - assets/images/
+    - assets/icons/
+
+  # fonts:
+  #   - family: GuardiansIcons
+  #     fonts:
+  #       - asset: assets/fonts/GuardiansIcons.ttf
