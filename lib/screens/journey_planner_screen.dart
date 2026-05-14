@@ -6,6 +6,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:geocoding/geocoding.dart';
 
 import '../l10n/app_localizations.dart';
 import '../providers/map_provider.dart';
@@ -102,7 +103,7 @@ class _JourneyPlannerScreenState extends ConsumerState<JourneyPlannerScreen> {
                     decoration: InputDecoration(
                       hintText: localizations?.destination ?? 'Destination',
                       prefixIcon:
-                          const Icon(Icons.location_on, color: AppColors.danger),
+                      const Icon(Icons.location_on, color: AppColors.danger),
                     ),
                     onSubmitted: (_) => _searchRoutes(),
                   ),
@@ -114,11 +115,11 @@ class _JourneyPlannerScreenState extends ConsumerState<JourneyPlannerScreen> {
                       onPressed: _isSearching ? null : _searchRoutes,
                       icon: _isSearching
                           ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(
-                                  strokeWidth: 2, color: Colors.white),
-                            )
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white),
+                      )
                           : const Icon(Icons.search_rounded),
                       label: Text(localizations?.findSafeRoutes ?? 'Find Safe Routes'),
                     ),
@@ -174,7 +175,7 @@ class _JourneyPlannerScreenState extends ConsumerState<JourneyPlannerScreen> {
                               strokeWidth: isSelected ? 5.0 : 3.0,
                               color: isSelected
                                   ? AppColors.accent
-                                  : AppColors.textHint.withOpacity(0.5),
+                                  : AppColors.textHint.withValues(alpha: 0.5), // ✅ corrigé
                             );
                           }).toList(),
                         ),
@@ -190,7 +191,7 @@ class _JourneyPlannerScreenState extends ConsumerState<JourneyPlannerScreen> {
                 flex: 2,
                 child: ListView.builder(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: AppDimens.paddingM),
+                  const EdgeInsets.symmetric(horizontal: AppDimens.paddingM),
                   itemCount: _routes!.length,
                   itemBuilder: (context, index) {
                     final route = _routes![index];
@@ -246,92 +247,20 @@ class _JourneyPlannerScreenState extends ConsumerState<JourneyPlannerScreen> {
     return best;
   }
 
-  Future<void> _searchRoutes() async {
-    // Parse origin if user typed coordinates manually.
-    if (_origin == null && _originController.text.trim().isNotEmpty) {
-      final parsedOrigin = _parseCoordinates(_originController.text.trim());
-      if (parsedOrigin != null) _origin = parsedOrigin;
+  Future<LatLng?> _geocodeAddress(String address) async {
+    try {
+      final locations = await locationFromAddress(address);
+      if (locations.isNotEmpty) {
+        return LatLng(locations.first.latitude, locations.first.longitude);
+      }
+    } catch (e) {
+      debugPrint('Geocoding failed for "$address": $e');
     }
-
-    if (_origin == null || _destController.text.trim().isEmpty) return;
-
-    setState(() => _isSearching = true);
-
-    // Try parsing destination as coordinates first, then fall back to geocoding.
-    final destText = _destController.text.trim();
-    _destination = _parseCoordinates(destText) ?? _simulateGeocode(destText.toLowerCase());
-
-    if (_destination == null) {
-      setState(() => _isSearching = false);
-      return;
-    }
-
-    // Generate 3 route options with different safety scores.
-    final riskEngine = ref.read(mapProvider.notifier).riskEngine;
-
-    final routes = <_RouteOption>[];
-    for (int i = 0; i < 3; i++) {
-      final points = _generateRoutePoints(_origin!, _destination!, variation: i);
-      final safetyScore = await riskEngine.calculateRouteSafety(points);
-      final distance = _calculateRouteDistance(points);
-      final duration = (distance / 40 * 60).round(); // ~40 km/h average
-
-      routes.add(_RouteOption(
-        name: i == 0 ? 'Direct Route' : (i == 1 ? 'Via Main Roads' : 'Safest Route'),
-        points: points,
-        safetyScore: safetyScore,
-        distanceKm: distance,
-        durationMinutes: duration,
-      ));
-    }
-
-    // Sort by safety (safest first).
-    routes.sort((a, b) => b.safetyScore.compareTo(a.safetyScore));
-
-    setState(() {
-      _routes = routes;
-      _selectedRoute = 0;
-      _isSearching = false;
-    });
-
-    // Fit map to show the route after the next frame to ensure
-    // the map widget has processed the new markers/polylines.
-    if (_origin != null && _destination != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        try {
-          _mapController.fitCamera(
-            CameraFit.bounds(
-              bounds: LatLngBounds(_origin!, _destination!),
-              padding: const EdgeInsets.all(50),
-            ),
-          );
-        } catch (_) {
-          // If fitCamera fails, fallback to moving to the destination.
-          _mapController.move(_destination!, 14);
-        }
-      });
-    }
+    return null;
   }
 
-  /// Parse "lat, lng" or "lat,lng" into LatLng. Returns null if invalid.
-  LatLng? _parseCoordinates(String text) {
-    // Remove all whitespace and split by comma.
-    final cleaned = text.replaceAll(RegExp(r'\s+'), '');
-    final parts = cleaned.split(',');
-    if (parts.length != 2) return null;
-
-    final lat = double.tryParse(parts[0]);
-    final lng = double.tryParse(parts[1]);
-    if (lat == null || lng == null) return null;
-
-    // Basic sanity checks for Cameroon / global coordinates.
-    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
-
-    return LatLng(lat, lng);
-  }
-
+  // Fallback simulation (conservée)
   LatLng? _simulateGeocode(String text) {
-    // Simple simulation — in production, use the Geocoding package.
     final knownPlaces = {
       'bastos': const LatLng(3.8900, 11.5000),
       'mokolo': const LatLng(3.8700, 11.5050),
@@ -346,24 +275,103 @@ class _JourneyPlannerScreenState extends ConsumerState<JourneyPlannerScreen> {
       'nsimeyong': const LatLng(3.8350, 11.5000),
       'biyem-assi': const LatLng(3.8400, 11.4850),
     };
-
     for (final entry in knownPlaces.entries) {
       if (text.contains(entry.key)) return entry.value;
     }
-
-    // Default: random point near Yaoundé.
     return LatLng(
       3.8480 + (text.length % 10 - 5) * 0.005,
       11.5021 + (text.length % 7 - 3) * 0.005,
     );
   }
 
+  Future<void> _searchRoutes() async {
+    setState(() => _isSearching = true);
+
+    // Géocodage départ
+    if (_origin == null && _originController.text.trim().isNotEmpty) {
+      final address = _originController.text.trim();
+      LatLng? coords = await _geocodeAddress(address);
+      if (coords == null) {
+        coords = _simulateGeocode(address.toLowerCase());
+        if (coords != null) debugPrint('⚠️ Using simulated coordinates for "$address"');
+      }
+      if (coords != null) setState(() => _origin = coords);
+    }
+
+    // Géocodage destination
+    final destText = _destController.text.trim();
+    if (destText.isEmpty) {
+      setState(() => _isSearching = false);
+      return;
+    }
+
+    LatLng? destination = await _geocodeAddress(destText);
+    if (destination == null) {
+      destination = _simulateGeocode(destText.toLowerCase());
+      if (destination != null) debugPrint('⚠️ Using simulated coordinates for "$destText"');
+    }
+
+    if (_origin == null || destination == null) {
+      setState(() => _isSearching = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not find location. Please try again.'), // ✅ texte statique
+            backgroundColor: AppColors.danger,
+          ),
+        );
+      }
+      return;
+    }
+
+    setState(() => _destination = destination);
+
+    // Génération des routes (inchangée)
+    final riskEngine = ref.read(mapProvider.notifier).riskEngine;
+    final routes = <_RouteOption>[];
+    for (int i = 0; i < 3; i++) {
+      final points = _generateRoutePoints(_origin!, _destination!, variation: i);
+      final safetyScore = await riskEngine.calculateRouteSafety(points);
+      final distance = _calculateRouteDistance(points);
+      final duration = (distance / 40 * 60).round();
+      routes.add(_RouteOption(
+        name: i == 0 ? 'Direct Route' : (i == 1 ? 'Via Main Roads' : 'Safest Route'),
+        points: points,
+        safetyScore: safetyScore,
+        distanceKm: distance,
+        durationMinutes: duration,
+      ));
+    }
+
+    routes.sort((a, b) => b.safetyScore.compareTo(a.safetyScore));
+
+    setState(() {
+      _routes = routes;
+      _selectedRoute = 0;
+      _isSearching = false;
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      try {
+        _mapController.fitCamera(
+          CameraFit.bounds(
+            bounds: LatLngBounds(_origin!, _destination!),
+            padding: const EdgeInsets.all(50),
+          ),
+        );
+      } catch (_) {
+        _mapController.move(_destination!, 14);
+      }
+    });
+  }
+
+  // ✅ Suppression de _parseCoordinates (inutilisé)
+
   List<LatLng> _generateRoutePoints(LatLng start, LatLng end,
       {int variation = 0}) {
     final points = <LatLng>[];
     const steps = 15;
     final offsetFactor = variation * 0.003;
-
     for (int i = 0; i <= steps; i++) {
       final t = i / steps;
       final lat = start.latitude + (end.latitude - start.latitude) * t +
@@ -380,25 +388,20 @@ class _JourneyPlannerScreenState extends ConsumerState<JourneyPlannerScreen> {
     for (int i = 1; i < points.length; i++) {
       total += LocationService.instance.calculateDistance(points[i - 1], points[i]);
     }
-    return total / 1000; // km
+    return total / 1000;
   }
 
   Future<void> _startMonitoredJourney() async {
     if (_origin == null || _destination == null || _routes == null) return;
-
     final route = _routes![_selectedRoute];
-    final userId = ref.read(mapProvider).currentPosition != null
-        ? 'local'
-        : 'local';
-
+    final userId = ref.read(mapProvider).currentPosition != null ? 'local' : 'local';
     await ref.read(trackingProvider.notifier).startJourney(
-          origin: _origin!,
-          destination: _destination!,
-          plannedDurationMinutes: route.durationMinutes,
-          routePoints: route.points,
-          deviceId: 'mobile_$userId',
-        );
-
+      origin: _origin!,
+      destination: _destination!,
+      plannedDurationMinutes: route.durationMinutes,
+      routePoints: route.points,
+      deviceId: 'mobile_$userId',
+    );
     if (mounted) context.go('/journey-active');
   }
 

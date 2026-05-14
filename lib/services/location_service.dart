@@ -85,9 +85,9 @@ class LocationService {
 
   /// Starts background location tracking with a callback.
   void startBackgroundLocation(
-    void Function(geo.Position) onPosition, {
-    int distanceFilterMeters = 20,
-  }) {
+      void Function(geo.Position) onPosition, {
+        int distanceFilterMeters = 20,
+      }) {
     _positionSubscription?.cancel();
     _positionSubscription = getLocationStream(
       distanceFilterMeters: distanceFilterMeters,
@@ -132,7 +132,7 @@ class LocationService {
     final dLng = _toRadians(b.longitude - a.longitude);
     final y = math.sin(dLng) * math.cos(_toRadians(b.latitude));
     final x = math.cos(_toRadians(a.latitude)) *
-            math.sin(_toRadians(b.latitude)) -
+        math.sin(_toRadians(b.latitude)) -
         math.sin(_toRadians(a.latitude)) *
             math.cos(_toRadians(b.latitude)) *
             math.cos(dLng);
