@@ -1,0 +1,41 @@
+ARGUMENTS TECHNIQUES POUR LE JURY - GUARDIAN AI
+=================================================
+Ce document adapte les points forts et l'architecture technique de l'application Guardians AI en fonction des profils spécifiques des membres de votre jury.
+
+-------------------------------------------------------------------------
+1. POUR LE CHERCHEUR POST-DOCTORANT (Rigueur, Architecture & Innovation)
+-------------------------------------------------------------------------
+L'approche de ce jury portera sur la solidite de votre architecture et la maniere dont vous avez resolu des problemes d'ingenierie complexes.
+
+* L'Architecture "Offline-First" : Mettez en avant le pattern de synchronisation. L'application ne tombe pas en panne sans internet. Elle utilise SQLite comme source de verite locale et un service de synchronisation d'arriere-plan (SyncService) qui ecoute les changements de connectivite pour pousser les donnees vers Supabase de maniere asynchrone.
+* Resolution du conflit materiel (Microphone) : Expliquez comment vous avez resolu le fait que deux services ne peuvent pas utiliser le micro en meme temps. L'AudioDetectionService utilise un algorithme a deux phases (12s pour la reconnaissance vocale de mots-cles, 3s de capture brute d'amplitude) avec un gestionnaire de "cooldown" pour eviter les plantages materiels.
+* Calculs Spatiaux : Mentionnez l'utilisation de la formule de Haversine dans le RiskScoringEngine pour calculer precisement les distances spheriques entre l'utilisateur et le centre des zones de risque.
+
+-------------------------------------------------------------------------
+2. POUR L'ETUDIANT/EXPERT EN CYBERSECURITE & DIGITAL FORENSICS
+-------------------------------------------------------------------------
+Ce jury cherchera des failles dans la protection de la vie privee et le traitement des donnees sensibles.
+
+* Privacy by Design (On-Device AI) : C'est votre argument massue. Aucun flux audio n'est envoye sur des serveurs tiers. Tout le traitement (Speech-to-Text et modele TensorFlow) se fait sur le processeur local du telephone. Les fichiers audio PCM temporaires crees pour l'analyse sont immediatement ecrases ou supprimes (_cleanupOldPcmFiles).
+* Securite du Traceur IoT : Le service TraceurService ne permet pas d'intercepter publiquement un traceur. L'appairage se fait via un code unique (IMEI/Pairing Code) qui lie cryptographiquement l'appareil a l'ID de l'utilisateur dans Supabase.
+* Stockage Securise : L'application utilise 'flutter_secure_storage' (chiffrement AES sur Android/Keystore) pour stocker les donnees sensibles plutot que les SharedPreferences classiques en clair.
+
+-------------------------------------------------------------------------
+3. POUR LE DATA SCIENTIST / BI ANALYST / AI RESEARCH SCIENTIST
+-------------------------------------------------------------------------
+Ce jury va fouiller sous le capot de votre Intelligence Artificielle et de vos algorithmes de donnes.
+
+* Traitement du Signal Audio (DSP) : Expliquez comment l'application analyse les cris. Le service effectue un framming du signal brut (fenetres de 512 echantillons), applique un fenetrage de Hamming, calcule le spectre de puissance via la Transformee de Fourier Rapide (FFT), puis extrait les caracteristiques MFCC (Mel-frequency cepstral coefficients) pour alimenter le modele.
+* Modele Edge ML : Vous utilisez un modele TensorFlow Lite quantifie (audio_model_float16.tflite) optimise pour l'inference mobile, classifiant le son avec un softmax pour extraire la probabilite d'un cri (seuil a 65%).
+* Moteur de Scoring Multi-Variables : Le RiskScoringEngine n'est pas qu'un if/else. C'est un algorithme pondere qui calcule un risque de 0.0 a 1.0 en croisant 5 variables : la proximite radiale aux zones de danger (40%), les rapports communautaires (25%), des multiplicateurs temporels (x1.6 la nuit), des zones Supabase (15%) et des bonus d'habitudes.
+* Route Sampling : Pour l'itineraire le plus sur, l'algorithme echantillonne N points sur la route et calcule la moyenne de risque de l'itineraire.
+
+-------------------------------------------------------------------------
+4. POUR L'EXPERT EN DEVELOPPEMENT DURABLE (IFDD)
+-------------------------------------------------------------------------
+Ce jury s'interesse a l'impact social, a l'adaptabilite au contexte local (Cameroun) et a l'efficience des ressources.
+
+* Frugalite Numerique et Accessibilite : L'application est concue pour les pays en developpement ou la 4G/3G est instable ou chere. L'absence de dependance permanente au cloud reduit la consommation de donnees mobiles pour les populations vulnerables.
+* Optimisation de l'Energie : L'algorithme audio ne fait pas tourner le lourd modele d'IA en permanence. Il ecoute passivement l'amplitude (le decibelmetre) de maniere tres legere, et ne reveille le modele TensorFlow que s'il y a un pic soudain de volume (variances et taux de changement superieurs aux seuils de base). Le traceur IoT dispose meme d'une commande 'sleep' pour preserver sa batterie.
+* Indepenance Technologique & Couts : Vous avez consciemment evite l'API Google Maps (payante et proprietaire) pour utiliser OpenStreetMap (gratuit, communautaire et participatif). Cela rend le projet economiquement viable et deployable a grande echelle sans explosion des couts serveur.
+* Impact Social et Inclusion : L'application repond directement a l'ODD 5 (Egalite entre les sexes, securite des femmes) et a l'ODD 11 (Villes et communautes durables) en creant des corridors de securite via le crowdsourcing (signalements communautaires).

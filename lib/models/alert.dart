@@ -12,6 +12,8 @@ enum AlertType {
   traceurSos,
   lowBattery,
   emergencyRunning,
+  warning, // Niveau 2: Doute, Alerte proches
+  duress, // Niveau 3: Contrainte, Alerte Police
 }
 
 class Alert {
@@ -52,6 +54,8 @@ class Alert {
         AlertType.traceurSos => 'Traceur SOS',
         AlertType.lowBattery => 'Low Battery',
         AlertType.emergencyRunning => 'Emergency Running',
+        AlertType.warning => 'Discreet Warning',
+        AlertType.duress => 'Duress / Hostage',
       };
 
   // ── JSON (Supabase) ──────────────────────────────────────────────────────
@@ -145,6 +149,8 @@ class Alert {
         'traceurSos' => AlertType.traceurSos,
         'lowBattery' => AlertType.lowBattery,
         'emergencyRunning' => AlertType.emergencyRunning,
+        'warning' => AlertType.warning,
+        'duress' => AlertType.duress,
         _ => AlertType.sos,
       };
 

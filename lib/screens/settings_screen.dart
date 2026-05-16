@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import '../l10n/app_localizations.dart';
 import '../providers/alert_provider.dart';
 import '../providers/auth_provider.dart';
+import '../providers/camouflage_provider.dart';
 import '../providers/connectivity_provider.dart';
 import '../providers/locale_provider.dart';
 import '../utils/constants.dart';
@@ -23,7 +24,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool _notificationsEnabled = true;
   bool _movementDetection = true;
   bool _audioDetection = false;
-  bool _camouflageMode = false;
   bool _showDiagnostics = false;
 
   @override
@@ -32,6 +32,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final connectivity = ref.watch(connectivityProvider);
     final alertState = ref.watch(alertProvider);
     final locale = ref.watch(localeProvider);
+    final isCamouflageActive = ref.watch(camouflageProvider);
     final localizations = AppLocalizations.of(context);
 
     final isFrench = locale.languageCode == 'fr';
@@ -214,13 +215,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
             // ── Privacy & Safety ─────────────────────────────────────────
             _sectionHeader(localizations?.privacy ?? 'Privacy & Safety'),
+            _navTile(
+              Icons.dialpad_rounded,
+              'Codes PIN d\'urgence',
+              'Configurer les codes de détresse multi-niveaux',
+              () => context.push('/pin-setup'),
+            ),
             _switchTile(
               Icons.visibility_off_rounded,
               localizations?.camouflageMode ?? 'Camouflage Mode',
               localizations?.camouflageModeDesc ??
                   'Hide the app behind a calculator interface',
-              _camouflageMode,
-              (v) => setState(() => _camouflageMode = v),
+              isCamouflageActive,
+              (v) => ref.read(camouflageProvider.notifier).toggle(v),
             ),
             _navTile(
               Icons.router_rounded,

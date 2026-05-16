@@ -26,6 +26,7 @@
         "google_fonts",
         "intl",
         "latlong2",
+        "math_expressions",
         "path",
         "path_provider",
         "permission_handler",
@@ -69,6 +70,14 @@
         "stack_trace",
         "stream_channel",
         "test_api",
+        "vector_math"
+      ]
+    },
+    {
+      "name": "math_expressions",
+      "version": "3.1.0",
+      "dependencies": [
+        "petitparser",
         "vector_math"
       ]
     },
@@ -522,6 +531,14 @@
         "stream_channel",
         "string_scanner",
         "term_glyph"
+      ]
+    },
+    {
+      "name": "petitparser",
+      "version": "7.0.2",
+      "dependencies": [
+        "collection",
+        "meta"
       ]
     },
     {
@@ -1597,14 +1614,6 @@
       "name": "vm_service",
       "version": "15.1.0",
       "dependencies": []
-    },
-    {
-      "name": "petitparser",
-      "version": "7.0.2",
-      "dependencies": [
-        "collection",
-        "meta"
-      ]
     },
     {
       "name": "pub_semver",

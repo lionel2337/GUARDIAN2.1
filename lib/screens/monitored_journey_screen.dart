@@ -11,6 +11,7 @@ import '../providers/tracking_provider.dart';
 import '../providers/alert_provider.dart';
 import '../services/location_service.dart';
 import '../utils/constants.dart';
+import '../widgets/pin_validation_dialog.dart';
 
 class MonitoredJourneyScreen extends ConsumerWidget {
   const MonitoredJourneyScreen({super.key});
@@ -199,10 +200,18 @@ class MonitoredJourneyScreen extends ConsumerWidget {
                     Expanded(
                       child: OutlinedButton.icon(
                         onPressed: () async {
-                          await ref
-                              .read(trackingProvider.notifier)
-                              .endJourney();
-                          if (context.mounted) context.go('/home');
+                          final level = await PinValidationDialog.show(context);
+                          if (level != null && context.mounted) {
+                            if (level == 2) {
+                              ref.read(alertProvider.notifier).triggerWarning();
+                            } else if (level == 3) {
+                              ref.read(alertProvider.notifier).triggerDuress();
+                            }
+                            
+                            // Visual termination of the journey
+                            await ref.read(trackingProvider.notifier).endJourney();
+                            if (context.mounted) context.go('/home');
+                          }
                         },
                         icon: const Icon(Icons.stop_rounded),
                         label: const Text('End Journey'),

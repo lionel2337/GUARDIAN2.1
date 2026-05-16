@@ -18,6 +18,7 @@ import '../widgets/alert_banner.dart';
 import '../widgets/community_report_button.dart';
 import '../widgets/device_marker.dart';
 import '../widgets/offline_banner.dart';
+import '../widgets/pin_validation_dialog.dart';
 import '../widgets/risk_heatmap_layer.dart';
 import '../widgets/sos_button.dart';
 
@@ -181,11 +182,36 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   onDismiss: () => ref
                       .read(alertProvider.notifier)
                       .acknowledgeAlert(alertState.activeAlerts.first.id),
-                  onCancel: () =>
-                      ref.read(alertProvider.notifier).cancelFallAlert(),
+                  onCancel: () async {
+                    final level = await PinValidationDialog.show(context);
+                    if (level != null && mounted) {
+                      if (level == 2) {
+                        ref.read(alertProvider.notifier).triggerWarning();
+                      } else if (level == 3) {
+                        ref.read(alertProvider.notifier).triggerDuress();
+                      }
+                      // In all cases, if a valid PIN was entered, visually cancel the alert
+                      ref.read(alertProvider.notifier).cancelFallAlert();
+                    }
+                  },
                 ),
               ),
             ),
+
+          // ── PIN Lock button (Discreet) ──────────────────────────────────
+          Positioned(
+            top: connectivity.isOnline ? 16 : 64,
+            left: 16,
+            child: SafeArea(
+              child: FloatingActionButton.small(
+                heroTag: 'pin_lock',
+                backgroundColor: AppColors.surface.withValues(alpha: 0.8),
+                elevation: 0,
+                onPressed: () => context.push('/pin-lock'),
+                child: const Icon(Icons.dialpad_rounded, color: AppColors.textHint),
+              ),
+            ),
+          ),
 
           // ── My location button ──────────────────────────────────────────
           Positioned(

@@ -9,9 +9,11 @@ import 'package:latlong2/latlong.dart';
 import 'package:geocoding/geocoding.dart';
 
 import '../l10n/app_localizations.dart';
+import '../models/safe_location.dart';
 import '../providers/map_provider.dart';
 import '../providers/tracking_provider.dart';
 import '../services/location_service.dart';
+import '../services/safe_routing_service.dart';
 import '../utils/constants.dart';
 import '../widgets/route_card.dart';
 
@@ -31,6 +33,7 @@ class _JourneyPlannerScreenState extends ConsumerState<JourneyPlannerScreen> {
   LatLng? _origin;
   LatLng? _destination;
   List<_RouteOption>? _routes;
+  List<SafeLocation> _safeWaypoints = [];
   int _selectedRoute = 0;
   bool _isSearching = false;
 
@@ -164,6 +167,20 @@ class _JourneyPlannerScreenState extends ConsumerState<JourneyPlannerScreen> {
                                 color: AppColors.danger, size: 32),
                           ),
                         ]),
+                      // Safe Waypoints markers
+                      if (_safeWaypoints.isNotEmpty)
+                        MarkerLayer(
+                          markers: _safeWaypoints.map((wp) {
+                            return Marker(
+                              point: wp.position,
+                              child: Icon(
+                                wp.type == SafeLocationType.police ? Icons.local_police : Icons.groups,
+                                color: wp.type == SafeLocationType.police ? Colors.blue : Colors.green,
+                                size: 28,
+                              ),
+                            );
+                          }).toList(),
+                        ),
                       // Route polylines
                       if (_routes != null)
                         PolylineLayer(
@@ -326,16 +343,25 @@ class _JourneyPlannerScreenState extends ConsumerState<JourneyPlannerScreen> {
 
     setState(() => _destination = destination);
 
-    // Génération des routes (inchangée)
+    // Recherche des waypoints de sécurité
+    final safeWaypoints = SafeRoutingService.instance.getOptimalSafeWaypoints(_origin!, _destination!);
+
+    // Génération des routes
     final riskEngine = ref.read(mapProvider.notifier).riskEngine;
     final routes = <_RouteOption>[];
     for (int i = 0; i < 3; i++) {
-      final points = _generateRoutePoints(_origin!, _destination!, variation: i);
+      final isSafest = (i == 2);
+      final points = _generateRoutePoints(_origin!, _destination!, variation: i, waypoints: isSafest ? safeWaypoints : []);
       final safetyScore = await riskEngine.calculateRouteSafety(points);
       final distance = _calculateRouteDistance(points);
       final duration = (distance / 40 * 60).round();
+      
+      String routeName = 'Direct Route';
+      if (i == 1) routeName = 'Via Main Roads';
+      if (i == 2) routeName = safeWaypoints.isNotEmpty ? 'Via ${safeWaypoints.first.name}' : 'Safest Route';
+
       routes.add(_RouteOption(
-        name: i == 0 ? 'Direct Route' : (i == 1 ? 'Via Main Roads' : 'Safest Route'),
+        name: routeName,
         points: points,
         safetyScore: safetyScore,
         distanceKm: distance,
@@ -347,6 +373,7 @@ class _JourneyPlannerScreenState extends ConsumerState<JourneyPlannerScreen> {
 
     setState(() {
       _routes = routes;
+      _safeWaypoints = safeWaypoints;
       _selectedRoute = 0;
       _isSearching = false;
     });
@@ -368,7 +395,17 @@ class _JourneyPlannerScreenState extends ConsumerState<JourneyPlannerScreen> {
   // ✅ Suppression de _parseCoordinates (inutilisé)
 
   List<LatLng> _generateRoutePoints(LatLng start, LatLng end,
-      {int variation = 0}) {
+      {int variation = 0, List<SafeLocation> waypoints = const []}) {
+    if (waypoints.isNotEmpty) {
+      final points = <LatLng>[];
+      points.add(start);
+      for (final wp in waypoints) {
+        points.addAll(_interpolateSegment(points.last, wp.position));
+      }
+      points.addAll(_interpolateSegment(points.last, end));
+      return points;
+    }
+
     final points = <LatLng>[];
     const steps = 15;
     final offsetFactor = variation * 0.003;
@@ -378,6 +415,18 @@ class _JourneyPlannerScreenState extends ConsumerState<JourneyPlannerScreen> {
           (variation > 0 ? offsetFactor * (1 - (2 * t - 1).abs()) : 0);
       final lng = start.longitude + (end.longitude - start.longitude) * t +
           (variation > 0 ? -offsetFactor * 0.5 * (1 - (2 * t - 1).abs()) : 0);
+      points.add(LatLng(lat, lng));
+    }
+    return points;
+  }
+
+  List<LatLng> _interpolateSegment(LatLng start, LatLng end) {
+    final points = <LatLng>[];
+    const steps = 10;
+    for (int i = 1; i <= steps; i++) {
+      final t = i / steps;
+      final lat = start.latitude + (end.latitude - start.latitude) * t;
+      final lng = start.longitude + (end.longitude - start.longitude) * t;
       points.add(LatLng(lat, lng));
     }
     return points;

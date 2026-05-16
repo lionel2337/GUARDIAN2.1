@@ -203,6 +203,49 @@ class AlertNotifier extends StateNotifier<AlertStateData> {
     );
   }
 
+  /// Trigger a Warning alert (Level 2: User in doubt).
+  /// Sends alert to contacts silently.
+  Future<void> triggerWarning() async {
+    final pos = await _location.getCurrentLocation();
+    final alert = Alert(
+      id: _uuid.v4(),
+      deviceId: _supabase.currentUser?.id ?? 'local',
+      alertType: AlertType.warning,
+      lat: pos?.latitude,
+      lng: pos?.longitude,
+      triggeredAt: DateTime.now(),
+    );
+
+    await _saveAndNotifyAlert(alert);
+    // Silent notification for the user to confirm it worked, but discreetly.
+    _notifications.showLocalNotification(
+      'Guardians AI',
+      'System active. Contacts notified.',
+    );
+  }
+
+  /// Trigger a Duress alert (Level 3: User forced).
+  /// Sends alert to police and contacts.
+  Future<void> triggerDuress() async {
+    final pos = await _location.getCurrentLocation();
+    final alert = Alert(
+      id: _uuid.v4(),
+      deviceId: _supabase.currentUser?.id ?? 'local',
+      alertType: AlertType.duress,
+      lat: pos?.latitude,
+      lng: pos?.longitude,
+      triggeredAt: DateTime.now(),
+    );
+
+    await _saveAndNotifyAlert(alert);
+    
+    // Simulate notifying the police (for the MVP/Jury)
+    _notifications.showLocalNotification(
+      '🚨 DURESS ALERT 🚨',
+      'Police (117) and Emergency Contacts have been silently notified with your location.',
+    );
+  }
+
   // ═══════════════════════════════════════════════════════════════════════
   // Acknowledge / Resolve
   // ═══════════════════════════════════════════════════════════════════════

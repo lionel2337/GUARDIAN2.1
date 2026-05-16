@@ -22,6 +22,10 @@ import 'screens/add_contact_screen.dart';
 import 'screens/alert_history_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/traceur_pairing_screen.dart';
+import 'screens/pin_setup_screen.dart';
+import 'screens/pin_lock_screen.dart';
+import 'screens/calculator_vault_screen.dart';
+import 'providers/camouflage_provider.dart';
 import 'utils/constants.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -59,6 +63,18 @@ final _router = GoRouter(
     GoRoute(
       path: '/ai-test',
       builder: (_, __) => const AiTestScreen(),
+    ),
+    GoRoute(
+      path: '/pin-setup',
+      builder: (_, __) => const PinSetupScreen(),
+    ),
+    GoRoute(
+      path: '/pin-lock',
+      builder: (_, __) => const PinLockScreen(),
+    ),
+    GoRoute(
+      path: '/calculator-vault',
+      builder: (_, __) => const CalculatorVaultScreen(),
     ),
   ],
 );
@@ -156,11 +172,39 @@ ThemeData _buildTheme() {
 // App Widget
 // ─────────────────────────────────────────────────────────────────────────────
 
-class GuardiansApp extends ConsumerWidget {
+class GuardiansApp extends ConsumerStatefulWidget {
   const GuardiansApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<GuardiansApp> createState() => _GuardiansAppState();
+}
+
+class _GuardiansAppState extends ConsumerState<GuardiansApp> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      final isCamouflageActive = ref.read(camouflageProvider);
+      if (isCamouflageActive) {
+        // Rediriger vers la calculatrice au retour dans l'app
+        _router.push('/calculator-vault');
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final locale = ref.watch(localeProvider);
 
     return MaterialApp.router(
